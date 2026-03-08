@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: rss-bridge
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: WHITELIST
+        value: "*"

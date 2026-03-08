@@ -1,0 +1,24 @@
+# RSS Bridge cache
+cache/
+
+# Environment variables
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Make.com scenario files (contain API keys)
+*.blueprint.json
+side-hustle-curator-scenario.json
+test-api-key.bat
