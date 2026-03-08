@@ -1,65 +1,83 @@
 <?php
 /**
  * Creator Spotlight Bridge
- * Fetches profiles from creatorspotlight.com/profiles
+ * Fetches creator profiles from creatorspotlight.com using their sitemap
  */
 class CreatorSpotlightBridge extends BridgeAbstract
 {
     const NAME = 'Creator Spotlight';
     const URI = 'https://www.creatorspotlight.com';
-    const DESCRIPTION = 'Returns profiles from Creator Spotlight';
+    const DESCRIPTION = 'Returns creator profile case studies and interviews from Creator Spotlight';
     const MAINTAINER = 'Curator Bot';
     const CACHE_TIMEOUT = 3600; // 1 hour
 
     public function collectData()
     {
-        $html = getSimpleHTMLDOM(self::URI . '/profiles');
+        // Fetch the sitemap which contains all profile URLs with last-modified dates
+        $sitemapUrl = self::URI . '/sitemap.xml';
+        $xml = getContents($sitemapUrl);
+        $sitemap = simplexml_load_string($xml);
 
-        // Since this is a dynamic React/JavaScript site, we may need to parse JSON-LD data
-        // or look for specific elements. Let's try to find profile cards.
+        // Extract profile URLs (those starting with /p/)
+        $profiles = [];
+        foreach ($sitemap->url as $url) {
+            $loc = (string)$url->loc;
+            $lastmod = (string)$url->lastmod;
 
-        // Look for common patterns in creator profile sites
-        $items = $html->find('article, .profile-card, .creator-card, [class*="profile"], [class*="creator"]');
-
-        if (empty($items)) {
-            // Fallback: Try to find any links that might be profiles
-            $items = $html->find('a[href*="/profile"], a[href*="/creator"]');
+            // Only include profile pages (/p/)
+            if (strpos($loc, '/p/') !== false) {
+                $profiles[] = [
+                    'url' => $loc,
+                    'lastmod' => strtotime($lastmod)
+                ];
+            }
         }
 
-        foreach ($items as $element) {
+        // Sort by last modified date (newest first)
+        usort($profiles, function($a, $b) {
+            return $b['lastmod'] - $a['lastmod'];
+        });
+
+        // Take only the 20 most recent profiles
+        $profiles = array_slice($profiles, 0, 20);
+
+        // Fetch each profile page to get title and description
+        foreach ($profiles as $profile) {
             $item = [];
+            $item['uri'] = $profile['url'];
+            $item['timestamp'] = $profile['lastmod'];
 
-            // Try to extract title from various possible elements
-            $titleElement = $element->find('h1, h2, h3, h4, .title, .name', 0);
-            if ($titleElement) {
-                $item['title'] = trim($titleElement->plaintext);
-            } else {
-                $item['title'] = 'New Creator Profile';
-            }
+            try {
+                $html = getSimpleHTMLDOM($profile['url']);
 
-            // Try to extract description
-            $descElement = $element->find('p, .description, .bio', 0);
-            if ($descElement) {
-                $item['content'] = trim($descElement->plaintext);
-            }
+                // Extract title from meta tags or h1
+                $titleMeta = $html->find('meta[property="og:title"]', 0);
+                if ($titleMeta) {
+                    $item['title'] = $titleMeta->content;
+                } else {
+                    $h1 = $html->find('h1', 0);
+                    $item['title'] = $h1 ? trim($h1->plaintext) : 'Creator Profile';
+                }
 
-            // Extract link
-            $linkElement = $element->find('a', 0);
-            if ($linkElement) {
-                $item['uri'] = $this->getURI() . $linkElement->href;
-            } else if ($element->tag === 'a') {
-                $item['uri'] = $this->getURI() . $element->href;
-            }
+                // Extract description from meta tags
+                $descMeta = $html->find('meta[property="og:description"]', 0);
+                if ($descMeta) {
+                    $item['content'] = $descMeta->content;
+                } else {
+                    $descMetaTag = $html->find('meta[name="description"]', 0);
+                    $item['content'] = $descMetaTag ? $descMetaTag->content : '';
+                }
 
-            // Only add items that have at least a title and URI
-            if (isset($item['title']) && isset($item['uri'])) {
-                $item['timestamp'] = time(); // Use current time since we don't have publish dates
+                // Extract author if available
+                $authorMeta = $html->find('meta[name="author"]', 0);
+                if ($authorMeta) {
+                    $item['author'] = $authorMeta->content;
+                }
+
                 $this->items[] = $item;
-            }
-
-            // Limit to 20 items to avoid overload
-            if (count($this->items) >= 20) {
-                break;
+            } catch (Exception $e) {
+                // Skip profiles that fail to load
+                continue;
             }
         }
     }
