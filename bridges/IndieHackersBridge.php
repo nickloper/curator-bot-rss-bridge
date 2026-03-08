@@ -30,8 +30,8 @@ class IndieHackersBridge extends BridgeAbstract
             }
         }
 
-        // Limit to first 30 URLs to fetch (we'll sort and take top 20 by date)
-        $postUrls = array_slice($postUrls, 0, 30);
+        // Limit to first 12 URLs to fetch (faster, reduces timeout risk)
+        $postUrls = array_slice($postUrls, 0, 12);
 
         $stories = [];
 
@@ -107,8 +107,8 @@ class IndieHackersBridge extends BridgeAbstract
             return $b['timestamp'] - $a['timestamp'];
         });
 
-        // Take only the 20 most recent stories
-        $this->items = array_slice($stories, 0, 20);
+        // Return all fetched stories (sorted by date)
+        $this->items = $stories;
     }
 
     public function getURI()
