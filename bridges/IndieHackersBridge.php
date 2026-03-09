@@ -44,54 +44,65 @@ class IndieHackersBridge extends BridgeAbstract
                 $item = [];
                 $item['uri'] = $fullUrl;
 
-                // Extract title from meta tag
-                $titleMeta = $storyHtml->find('meta[property="og:title"]', 0);
-                if ($titleMeta) {
-                    $item['title'] = $titleMeta->content;
+                // Extract data from JSON-LD structured data (primary source)
+                $scripts = $storyHtml->find('script[type="application/ld+json"]');
+                $jsonData = null;
+
+                foreach ($scripts as $script) {
+                    $data = json_decode($script->innertext, true);
+                    if ($data && isset($data['@type']) && $data['@type'] === 'Article') {
+                        $jsonData = $data;
+                        break;
+                    }
+                }
+
+                // Extract title
+                if ($jsonData && isset($jsonData['headline'])) {
+                    $item['title'] = $jsonData['headline'];
                 } else {
-                    $h1 = $storyHtml->find('h1', 0);
-                    $item['title'] = $h1 ? trim($h1->plaintext) : 'Indie Hacker Story';
+                    $titleMeta = $storyHtml->find('meta[property="og:title"]', 0);
+                    if ($titleMeta) {
+                        $item['title'] = $titleMeta->content;
+                    } else {
+                        $h1 = $storyHtml->find('h1', 0);
+                        $item['title'] = $h1 ? trim($h1->plaintext) : 'Indie Hacker Story';
+                    }
                 }
 
                 // Extract description
-                $descMeta = $storyHtml->find('meta[property="og:description"]', 0);
-                if ($descMeta) {
-                    $item['content'] = $descMeta->content;
+                if ($jsonData && isset($jsonData['description'])) {
+                    $item['content'] = $jsonData['description'];
                 } else {
-                    $descMetaTag = $storyHtml->find('meta[name="description"]', 0);
-                    $item['content'] = $descMetaTag ? $descMetaTag->content : '';
+                    $descMeta = $storyHtml->find('meta[property="og:description"]', 0);
+                    if ($descMeta) {
+                        $item['content'] = $descMeta->content;
+                    } else {
+                        $descMetaTag = $storyHtml->find('meta[name="description"]', 0);
+                        $item['content'] = $descMetaTag ? $descMetaTag->content : '';
+                    }
                 }
 
-                // Extract publication date from meta tag
-                $dateMeta = $storyHtml->find('meta[property="article:published_time"]', 0);
-                if ($dateMeta) {
-                    $item['timestamp'] = strtotime($dateMeta->content);
+                // Extract publication date
+                if ($jsonData && isset($jsonData['datePublished'])) {
+                    $item['timestamp'] = strtotime($jsonData['datePublished']);
                 } else {
-                    // Fallback: try to find date in schema.org data
-                    $datePublished = $storyHtml->find('meta[itemprop="datePublished"]', 0);
-                    if ($datePublished) {
-                        $item['timestamp'] = strtotime($datePublished->content);
-                    } else {
-                        // No date found, skip this story
-                        continue;
-                    }
+                    // No date found, skip this story
+                    continue;
                 }
 
                 // Extract author
-                $authorMeta = $storyHtml->find('meta[property="article:author"]', 0);
-                if ($authorMeta) {
-                    $item['author'] = $authorMeta->content;
-                } else {
-                    $authorName = $storyHtml->find('meta[name="author"]', 0);
-                    if ($authorName) {
-                        $item['author'] = $authorName->content;
-                    }
+                if ($jsonData && isset($jsonData['author']['name'])) {
+                    $item['author'] = $jsonData['author']['name'];
                 }
 
                 // Extract image if available
-                $imageMeta = $storyHtml->find('meta[property="og:image"]', 0);
-                if ($imageMeta && isset($imageMeta->content)) {
-                    $item['enclosures'] = [$imageMeta->content];
+                if ($jsonData && isset($jsonData['image']['url'])) {
+                    $item['enclosures'] = [$jsonData['image']['url']];
+                } else {
+                    $imageMeta = $storyHtml->find('meta[property="og:image"]', 0);
+                    if ($imageMeta && isset($imageMeta->content)) {
+                        $item['enclosures'] = [$imageMeta->content];
+                    }
                 }
 
                 $stories[] = $item;
