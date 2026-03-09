@@ -32,11 +32,18 @@ class MainStreetMinuteBridge extends BridgeAbstract
             }
         }
 
-        // Reverse to get newest first (sitemap often lists oldest first)
-        $articles = array_reverse($articles);
+        // Sitemap is alphabetical, not chronological
+        // Sample articles from throughout the list to find Main Street Minute content
+        // Take every 3rd article to get a good spread across all 181 articles
+        $sampledArticles = [];
+        for ($i = 0; $i < count($articles); $i += 3) {
+            $sampledArticles[] = $articles[$i];
+            if (count($sampledArticles) >= 40) {
+                break;
+            }
+        }
 
-        // Limit to first 30 URLs to check (to avoid timeout)
-        $articles = array_slice($articles, 0, 30);
+        $articles = $sampledArticles;
 
         $mainStreetArticles = [];
 
