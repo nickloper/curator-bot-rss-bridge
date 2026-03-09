@@ -45,8 +45,8 @@ class MainStreetMinuteBridge extends BridgeAbstract
             try {
                 $html = getSimpleHTMLDOM($articleUrl);
 
-                // Look for the "Main Street Minute" category heading
-                $categoryHeading = $html->find('h4', 0);
+                // Look for the "Main Street Minute" category heading (h6 tag)
+                $categoryHeading = $html->find('h6', 0);
                 $isMainStreet = false;
 
                 if ($categoryHeading && stripos($categoryHeading->plaintext, 'Main Street Minute') !== false) {
