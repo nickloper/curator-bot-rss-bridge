@@ -33,22 +33,15 @@ class MainStreetMinuteBridge extends BridgeAbstract
         }
 
         // Sitemap is alphabetical, not chronological
-        // Sample articles from throughout the list to find Main Street Minute content
-        // Take every 3rd article to get a good spread across all 181 articles
-        $sampledArticles = [];
-        for ($i = 0; $i < count($articles); $i += 3) {
-            $sampledArticles[] = $articles[$i];
-            if (count($sampledArticles) >= 40) {
-                break;
-            }
-        }
-
-        $articles = $sampledArticles;
-
+        // We'll check articles sequentially until we find enough Main Street Minute ones
         $mainStreetArticles = [];
 
-        // Fetch each article to check if it's Main Street Minute
+        // Loop through all articles until we find 15 Main Street Minute articles
         foreach ($articles as $articleUrl) {
+            // Stop if we already have 15 Main Street Minute articles
+            if (count($mainStreetArticles) >= 15) {
+                break;
+            }
             try {
                 $html = getSimpleHTMLDOM($articleUrl);
 
@@ -137,11 +130,6 @@ class MainStreetMinuteBridge extends BridgeAbstract
                 }
 
                 $mainStreetArticles[] = $item;
-
-                // Stop after finding 15 Main Street Minute articles
-                if (count($mainStreetArticles) >= 15) {
-                    break;
-                }
 
             } catch (Exception $e) {
                 // Skip articles that fail to load
