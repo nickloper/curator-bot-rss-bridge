@@ -45,12 +45,16 @@ class MainStreetMinuteBridge extends BridgeAbstract
             try {
                 $html = getSimpleHTMLDOM($articleUrl);
 
-                // Look for the "Main Street Minute" category heading (h6 tag)
-                $categoryHeading = $html->find('h6', 0);
+                // Look for the "Main Street Minute" category heading (h3 tag)
                 $isMainStreet = false;
 
-                if ($categoryHeading && stripos($categoryHeading->plaintext, 'Main Street Minute') !== false) {
-                    $isMainStreet = true;
+                // Check all h3 tags for "Main Street Minute"
+                $h3Tags = $html->find('h3');
+                foreach ($h3Tags as $h3) {
+                    if (stripos($h3->plaintext, 'Main Street Minute') !== false) {
+                        $isMainStreet = true;
+                        break;
+                    }
                 }
 
                 // Skip if not a Main Street Minute article
