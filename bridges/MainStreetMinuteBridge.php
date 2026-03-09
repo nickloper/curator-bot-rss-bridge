@@ -33,15 +33,13 @@ class MainStreetMinuteBridge extends BridgeAbstract
         }
 
         // Sitemap is alphabetical, not chronological
-        // We'll check articles sequentially until we find enough Main Street Minute ones
+        // Check first 60 articles to get a good sample of Main Street Minute content
+        // Then sort by date and take the most recent 3
+        $articles = array_slice($articles, 0, 60);
         $mainStreetArticles = [];
 
-        // Loop through all articles until we find 15 Main Street Minute articles
+        // Loop through articles to find Main Street Minute ones
         foreach ($articles as $articleUrl) {
-            // Stop if we already have 15 Main Street Minute articles
-            if (count($mainStreetArticles) >= 15) {
-                break;
-            }
             try {
                 $html = getSimpleHTMLDOM($articleUrl);
 
@@ -142,7 +140,8 @@ class MainStreetMinuteBridge extends BridgeAbstract
             return $b['timestamp'] - $a['timestamp'];
         });
 
-        $this->items = $mainStreetArticles;
+        // Take only the 3 most recent
+        $this->items = array_slice($mainStreetArticles, 0, 3);
     }
 
     public function getURI()
